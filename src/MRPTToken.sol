@@ -124,7 +124,11 @@ contract MRPTToken is IMRPTToken, Ownable, ERC20, WormholeAdapter, LayerZeroAdap
         payable
         override
     {
-        _remoteTransfer(dstChainId, from, to, value, params);
+        // Get fee before transfer
+        uint256 feeAmount = value * TRANSFER_FEE / 1000;
+        super.transferFrom(_msgSender(), FEE_RECEIVER, feeAmount);
+
+        _remoteTransfer(dstChainId, from, to, value - feeAmount, params);
     }
 
     /// @inheritdoc IMRPTToken
@@ -141,6 +145,10 @@ contract MRPTToken is IMRPTToken, Ownable, ERC20, WormholeAdapter, LayerZeroAdap
         payable
         override
     {
+        // Get fee before transfer
+        uint256 feeAmount = value * TRANSFER_FEE / 1000;
+        super.transferFrom(_msgSender(), FEE_RECEIVER, feeAmount);
+
         _remoteTransferWithCallback(dstChainId, from, to, value, gasForCallback, payload, params);
     }
 
