@@ -9,7 +9,7 @@ fs_permissions = [
 cancun = true
 src = "src"
 out = "out"
-libs = ["lib"]
+libs = ["lib", "node_modules"]
 
 [profile.default.fuzz]
 runs = 100
