@@ -2,29 +2,117 @@
 
 pragma solidity ^0.8.19;
 
-import { IOmniFungible } from "./interfaces/IOmniFungible.sol";
+import { IMRPTToken } from "./interfaces/IMRPTToken.sol";
 import { IReceiveTransferCallback } from "./interfaces/IReceiveTransferCallback.sol";
 
 import { AddressTypeCast } from "./libraries/AddressTypeCast.sol";
 import { Message } from "./libraries/Message.sol";
 import { Ownable } from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import { ERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import { VestingWallet } from "lib/openzeppelin-contracts/contracts/finance/VestingWallet.sol";
 import { ExcessivelySafeCall } from "./libraries/ExcessivelySafeCall.sol";
 
 import { LayerZeroAdapter } from "./adapters/LayerZeroAdapter.sol";
 import { WormholeAdapter } from "./adapters/WormholeAdapter.sol";
 
-contract OmniFungible is IOmniFungible, Ownable, ERC20, WormholeAdapter, LayerZeroAdapter {
+contract MRPTToken is IMRPTToken, Ownable, ERC20, WormholeAdapter, LayerZeroAdapter {
     using Message for bytes;
     using AddressTypeCast for bytes32;
     using AddressTypeCast for address;
     using ExcessivelySafeCall for address;
 
     uint256 constant DEFAULT_GAS_LIMIT = 500_000;
+    uint256 public constant MAX_SUPPLY = 900e24;
 
-    constructor(string memory _name, string memory _symbol) Ownable() ERC20(_name, _symbol) { }
+    uint64 public constant ECOSYSTEM_VESTING_DURATION = 20 * 30 days;
+    uint64 public constant ECOSYSTEM_VESTING_DELAY = 9 * 30 days;
+    uint64 public constant ECOSYSTEM_PERCENT = 2000;
 
-    /// @inheritdoc IOmniFungible
+    uint64 public constant MARTKETING_VESTING_DURATION = 20 * 30 days;
+    uint64 public constant MARKETING_VESTING_DELAY = 5 * 30 days;
+    uint64 public constant MARKETING_PERCENT = 1800;
+
+    uint64 public constant STAKING_VESTING_DURATION = 60 * 30 days;
+    uint64 public constant STAKING_VESTING_DELAY = 0;
+    uint64 public constant STAKING_PERCENT = 2100;
+
+    uint64 public constant TEAM_VESTING_DURATION = 20 * 30 days;
+    uint64 public constant TEAM_VESTING_DELAY = 12 * 30 days;
+    uint64 public constant TEAM_PERCENT = 1000;
+
+    uint64 public constant ADVISOR_VESTING_DURATION = 20 * 30 days;
+    uint64 public constant ADVISOR_VESTING_DELAY = 10 * 30 days;
+    uint64 public constant ADVISOR_PERCENT = 500;
+
+    address public FEE_RECEIVER;
+    uint256 public TRANSFER_FEE;
+    // uint256 public mintable;
+
+    event VestingStarted(address beneficiaryAddress, address vestingWallet);
+
+    constructor(
+        uint64 startVestingTimestamp,
+        address ecoSystem,
+        address marketing,
+        address stakingRewards,
+        address team,
+        address advisors
+    )
+        Ownable()
+        ERC20("Marpto", "MRPT")
+    {
+        // mintable = MAX_SUPPLY;
+
+        // Ecosystem - 20% 9 months cliff and 5% monthly for 20 months
+        _startVesting(
+            ecoSystem, startVestingTimestamp, ECOSYSTEM_VESTING_DELAY, ECOSYSTEM_VESTING_DURATION, ECOSYSTEM_PERCENT
+        );
+
+        // Marketing - 18% 5 months cliff and 5% monthly for 20 months
+        _startVesting(
+            marketing, startVestingTimestamp, MARKETING_VESTING_DELAY, MARTKETING_VESTING_DURATION, MARKETING_PERCENT
+        );
+
+        // Staking Rewards - 21% Linear vesting for 60 Months
+        _startVesting(
+            stakingRewards, startVestingTimestamp, STAKING_VESTING_DELAY, STAKING_VESTING_DURATION, STAKING_PERCENT
+        );
+
+        // Team - 10% 12 months Cliff 5% monthly for 20 Months
+        _startVesting(team, startVestingTimestamp, TEAM_VESTING_DELAY, TEAM_VESTING_DURATION, TEAM_PERCENT);
+
+        // Advisors - 5% 10 Months cliff and 5% monthly for 20 months
+        _startVesting(advisors, startVestingTimestamp, ADVISOR_VESTING_DELAY, ADVISOR_VESTING_DURATION, ADVISOR_PERCENT);
+    }
+
+    function _startVesting(
+        address beneficiaryAddress,
+        uint64 startVestingTimestamp,
+        uint64 cliffSeconds,
+        uint64 durationSeconds,
+        uint64 proportion
+    )
+        internal
+    {
+        address vestingWallet =
+            address(new VestingWallet(beneficiaryAddress, startVestingTimestamp + cliffSeconds, durationSeconds));
+        uint256 amount = MAX_SUPPLY * proportion / 10_000;
+        // mintable -= amount;
+        _mint(vestingWallet, amount);
+        emit VestingStarted(beneficiaryAddress, vestingWallet);
+    }
+
+    // function mint(address account, uint256 amount) external onlyOwner {
+    //     mintable -= amount;
+    //     _mint(account, amount);
+    // }
+
+    function setFeeOption(address feeReceiver, uint256 amount) external onlyOwner {
+        FEE_RECEIVER = feeReceiver;
+        TRANSFER_FEE = amount;
+    }
+
+    /// @inheritdoc IMRPTToken
     function transferFrom(
         uint16 dstChainId,
         address from,
@@ -39,7 +127,7 @@ contract OmniFungible is IOmniFungible, Ownable, ERC20, WormholeAdapter, LayerZe
         _remoteTransfer(dstChainId, from, to, value, params);
     }
 
-    /// @inheritdoc IOmniFungible
+    /// @inheritdoc IMRPTToken
     function transferFromWithCallback(
         uint16 dstChainId,
         address from,
@@ -56,7 +144,7 @@ contract OmniFungible is IOmniFungible, Ownable, ERC20, WormholeAdapter, LayerZe
         _remoteTransferWithCallback(dstChainId, from, to, value, gasForCallback, payload, params);
     }
 
-    /// @inheritdoc IOmniFungible
+    /// @inheritdoc IMRPTToken
     function circulatingSupply() external view override returns (uint256) {
         return totalSupply();
     }

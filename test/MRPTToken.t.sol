@@ -2,10 +2,10 @@
 pragma solidity ^0.8.13;
 
 import { Test, console2 } from "forge-std/Test.sol";
-import { OmniFungible } from "../src/OmniFungible.sol";
+import { MRPTToken } from "../src/MRPTToken.sol";
 
-contract OmniFungibleTest is Test {
-    OmniFungible public omniFungible;
+contract MRPTTokenTest is Test {
+    MRPTToken public mrp_token;
 
     function setUp() public { }
 }

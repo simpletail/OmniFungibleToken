@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.19;
 
-import {IAdapterCallParamStructure} from "../structures/IAdapterCallParamStructure.sol";
+import { IAdapterCallParamStructure } from "../structures/IAdapterCallParamStructure.sol";
 
-interface IOmniFungible is IAdapterCallParamStructure {
+interface IMRPTToken is IAdapterCallParamStructure {
     /**
      * @dev Emitted when a remote transfer is initiated from the source chain
      *
@@ -13,12 +13,7 @@ interface IOmniFungible is IAdapterCallParamStructure {
      * @param from Account on local chain to debit
      * @param amount Value amount been credited to `receipient`
      */
-    event RemoteTransfer(
-        uint16 indexed dstChainId,
-        bytes32 indexed receipient,
-        address indexed from,
-        uint256 amount
-    );
+    event RemoteTransfer(uint16 indexed dstChainId, bytes32 indexed receipient, address indexed from, uint256 amount);
     /**
      * @dev Emitted when the destination chain receives a token
      * transfer from a remote chain
@@ -27,11 +22,7 @@ interface IOmniFungible is IAdapterCallParamStructure {
      * @param to Address of EVM account that received the transfer
      * @param amount Value amount received
      */
-    event RemoteTransferReceived(
-        uint16 indexed srcChainId,
-        address indexed to,
-        uint256 amount
-    );
+    event RemoteTransferReceived(uint16 indexed srcChainId, address indexed to, uint256 amount);
 
     /**
      * @dev Moves a `value` amount from `from` to `to` account
@@ -48,7 +39,9 @@ interface IOmniFungible is IAdapterCallParamStructure {
         bytes32 to,
         uint256 value,
         AdapterCallParams calldata params
-    ) external payable;
+    )
+        external
+        payable;
 
     /**
      * @dev Moves a `value` amount from `from` to `to` account and calling
@@ -70,7 +63,9 @@ interface IOmniFungible is IAdapterCallParamStructure {
         uint64 gasForCallback,
         bytes calldata payload,
         AdapterCallParams calldata params
-    ) external payable;
+    )
+        external
+        payable;
 
     /**
      * @dev Returns the value of tokens in circulation on the local chain
